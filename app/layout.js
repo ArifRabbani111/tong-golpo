@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "MatchTalk — Anonymous event chat",
+  title: "Tong-Golpo — Anonymous event chat",
   description: "Drop your take. No login, no names, just the game.",
 };
 

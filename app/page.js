@@ -66,7 +66,7 @@ export default function HomePage() {
     <div className="wrap">
       <div className="topbar">
         <div className="brand">
-          Match<span>Talk</span>
+          Tong<span>Golpo</span>
         </div>
         <div className="tagline">drop your take · no login</div>
       </div>
