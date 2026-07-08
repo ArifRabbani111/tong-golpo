@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getStoredUser, getToken, logout } from "../lib/clientAuth";
 
 const STATUS_LABEL = { live: "Live", upcoming: "Upcoming", ended: "Ended" };
 
 export default function HomePage() {
+  const router = useRouter();
   const [events, setEvents] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
@@ -12,6 +15,11 @@ export default function HomePage() {
   const [status, setStatus] = useState("upcoming");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
 
   function loadEvents() {
     return fetch("/api/events")
@@ -54,6 +62,13 @@ export default function HomePage() {
     }
   }
 
+  function handleEventClick(e, eventId) {
+    if (!getToken()) {
+      e.preventDefault();
+      router.push(`/auth?returnTo=${encodeURIComponent(`/event/${eventId}`)}`);
+    }
+  }
+
   const groups = events
     ? {
         live: events.filter((e) => e.status === "live"),
@@ -62,13 +77,36 @@ export default function HomePage() {
       }
     : null;
 
+  const displayName = user?.nickname?.startsWith("anon_")
+    ? user.nickname.replace(/^anon_/, "Guest ")
+    : user?.nickname || user?.email;
+
   return (
     <div className="wrap">
       <div className="topbar">
         <div className="brand">
           Tong<span>Golpo</span>
         </div>
-        <div className="tagline">drop your take · no login</div>
+        <div className="nav-links">
+          {user ? (
+            <>
+              <a href="/conversations">DMs</a>
+              <span className="tagline">{displayName}</span>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => {
+                  logout();
+                  setUser(null);
+                }}
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <a href="/auth">Log in</a>
+          )}
+        </div>
       </div>
 
       <button className="add-event-btn" onClick={() => setShowForm((s) => !s)}>
@@ -118,7 +156,7 @@ export default function HomePage() {
             <div key={key}>
               <div className="section-label">{STATUS_LABEL[key]}</div>
               {groups[key].map((e) => (
-                <EventCard key={e.id} event={e} />
+                <EventCard key={e.id} event={e} onClick={handleEventClick} />
               ))}
             </div>
           ) : null
@@ -127,9 +165,13 @@ export default function HomePage() {
   );
 }
 
-function EventCard({ event }) {
+function EventCard({ event, onClick }) {
   return (
-    <a className="event-card" href={`/event/${event.id}`}>
+    <a
+      className="event-card"
+      href={`/event/${event.id}`}
+      onClick={(e) => onClick(e, event.id)}
+    >
       <div className="event-top">
         <span className={`status-pill status-${event.status}`}>
           <span className="dot" />

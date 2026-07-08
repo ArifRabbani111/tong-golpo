@@ -8,35 +8,59 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String?   @unique  // null for anonymous users
-  password  String?   // null for anonymous users
-  nickname  String?   // user can set their own display name
-  createdAt DateTime  @default(now())
-  messages  Message[]
+  id           String                    @id @default(cuid())
+  email        String?                   @unique
+  password     String?
+  nickname     String?
+  createdAt    DateTime                  @default(now())
+  messages     Message[]
+  participants ConversationParticipant[]
 }
 
 model Event {
   id        String    @id @default(cuid())
   title     String
-  // e.g. "Argentina vs France"
   subtitle  String?
-  // e.g. "World Cup Final · 8:00 PM"
   status    String    @default("upcoming")
-  // upcoming | live | ended
   createdAt DateTime  @default(now())
   messages  Message[]
 }
 
+model Conversation {
+  id           String                    @id @default(cuid())
+  type         String                    @default("dm")
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
 model Message {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  userId    String 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  body      String
-  createdAt DateTime @default(now())
+  id             String        @id @default(cuid())
+  eventId        String?
+  event          Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body           String
+  mediaUrl       String?
+  mediaType      String?
+  createdAt      DateTime      @default(now())
 
   @@index([eventId, createdAt])
+  @@index([conversationId, createdAt])
   @@index([userId])
 }

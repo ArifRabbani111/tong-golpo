@@ -397,3 +397,262 @@ button {
 .you-nick {
   color: var(--gold);
 }
+
+/* ---------- auth ---------- */
+
+.auth-page .topbar {
+  justify-content: center;
+}
+
+.auth-box {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.tab {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--floodlight-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.tab.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-form input {
+  background: var(--pitch);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--floodlight);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  padding: 11px 13px;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.anon-info {
+  font-size: 14px;
+  color: var(--floodlight-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.password-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--floodlight-dim);
+}
+
+/* ---------- nav ---------- */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+
+.nav-links a {
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--floodlight-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0;
+}
+
+.link-btn:hover {
+  color: var(--live);
+}
+
+/* ---------- live badge ---------- */
+
+.live-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--live);
+  margin-top: 6px;
+}
+
+/* ---------- media ---------- */
+
+.media-wrap {
+  margin: 6px 0 4px;
+}
+
+.msg-media {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.msg-gif {
+  max-height: 240px;
+  object-fit: contain;
+}
+
+.attach-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 12px;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.attach-btn:hover {
+  border-color: var(--gold);
+}
+
+.media-preview {
+  position: relative;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.media-preview img {
+  max-height: 120px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.clear-media {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--live);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ---------- message actions ---------- */
+
+.bubble-own {
+  border-color: rgba(232, 181, 80, 0.25);
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--floodlight-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0;
+}
+
+.action-btn:hover {
+  color: var(--gold);
+}
+
+.action-btn.danger:hover {
+  color: var(--live);
+}
+
+/* ---------- DMs ---------- */
+
+.search-box input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--floodlight);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.search-result {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--floodlight);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.search-result:hover {
+  border-color: var(--gold);
+}
+
+.dm-card .event-top {
+  margin-bottom: 4px;
+}
+
+.dm-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

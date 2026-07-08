@@ -3,17 +3,33 @@ const { prisma } = require("../../../../../lib/db");
 const { getUserFromRequest, requireAuth } = require("../../../../../lib/auth");
 const { checkUserMessageRateLimit } = require("../../../../../lib/rateLimit");
 const { formatMessage } = require("../../../../../lib/displayName");
-const { triggerEventMessage } = require("../../../../../lib/pusher");
+const { triggerConversationMessage } = require("../../../../../lib/pusher");
 
 const MAX_BODY_LEN = 500;
 const userInclude = { user: { select: { id: true, email: true, nickname: true } } };
 
+async function assertParticipant(conversationId, userId) {
+  const participant = await prisma.conversationParticipant.findFirst({
+    where: { conversationId, userId },
+  });
+  return Boolean(participant);
+}
+
 async function GET(req, { params }) {
   const { id } = params;
+  const user = await getUserFromRequest(req);
+  const authError = requireAuth(user);
+  if (authError) return authError;
+
+  const isParticipant = await assertParticipant(id, user.id);
+  if (!isParticipant) {
+    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  }
+
   const { searchParams } = new URL(req.url);
   const after = searchParams.get("after");
 
-  const where = { eventId: id };
+  const where = { conversationId: id };
   if (after) {
     where.createdAt = { gt: new Date(after) };
   }
@@ -33,6 +49,11 @@ async function POST(req, { params }) {
   const user = await getUserFromRequest(req);
   const authError = requireAuth(user);
   if (authError) return authError;
+
+  const isParticipant = await assertParticipant(id, user.id);
+  if (!isParticipant) {
+    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  }
 
   const allowed = await checkUserMessageRateLimit(user.id);
   if (!allowed) {
@@ -57,14 +78,9 @@ async function POST(req, { params }) {
     );
   }
 
-  const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) {
-    return NextResponse.json({ error: "Event not found." }, { status: 404 });
-  }
-
   const message = await prisma.message.create({
     data: {
-      eventId: id,
+      conversationId: id,
       userId: user.id,
       body: text || (mediaType === "gif" ? "sent a GIF" : "sent an image"),
       mediaUrl,
@@ -73,8 +89,13 @@ async function POST(req, { params }) {
     include: userInclude,
   });
 
+  await prisma.conversation.update({
+    where: { id },
+    data: { updatedAt: new Date() },
+  });
+
   const formatted = formatMessage(message);
-  await triggerEventMessage(id, formatted);
+  await triggerConversationMessage(id, formatted);
 
   return NextResponse.json(formatted, { status: 201 });
 }

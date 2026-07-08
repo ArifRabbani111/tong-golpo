@@ -1,8 +1,9 @@
 const { NextResponse } = require("next/server");
 const bcrypt = require("bcryptjs");
-const { prisma } = require("../../../lib/db");
-const { generateToken } = require("../../../lib/jwt");
-const { getOrCreateAnonUser } = require("../../../lib/anon");
+const { prisma } = require("../../../../lib/db");
+const { generateToken } = require("../../../../lib/jwt");
+const { getOrCreateAnonUser } = require("../../../../lib/anon");
+const { randomNickname } = require("../../../../lib/nickname");
 
 async function POST(req) {
   const body = await req.json().catch(() => null);
@@ -10,14 +11,10 @@ async function POST(req) {
   const password = body?.password?.toString();
   const isAnon = body?.anonymous === true;
 
-  // Anonymous login
   if (isAnon) {
-    const sessionId = body?.sessionId; // should come from client
+    const sessionId = body?.sessionId;
     if (!sessionId) {
-      return NextResponse.json(
-        { error: "Session ID required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Session ID required." }, { status: 400 });
     }
 
     const user = await getOrCreateAnonUser(sessionId);
@@ -32,31 +29,19 @@ async function POST(req) {
     });
   }
 
-  // Regular email login
   if (!email || !password) {
-    return NextResponse.json(
-      { error: "Email and password required." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Email and password required." }, { status: 400 });
   }
 
-  const user = await prisma.user.findFirst({
-    where: { email },
-  });
+  const user = await prisma.user.findFirst({ where: { email } });
 
-  if (!user) {
-    return NextResponse.json(
-      { error: "Email or password incorrect." },
-      { status: 401 }
-    );
+  if (!user || !user.password) {
+    return NextResponse.json({ error: "Email or password incorrect." }, { status: 401 });
   }
 
   const passwordMatch = await bcrypt.compare(password, user.password);
   if (!passwordMatch) {
-    return NextResponse.json(
-      { error: "Email or password incorrect." },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Email or password incorrect." }, { status: 401 });
   }
 
   const token = generateToken(user.id);

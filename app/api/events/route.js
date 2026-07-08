@@ -1,24 +1,9 @@
 const { NextResponse } = require("next/server");
 const { prisma } = require("../../../lib/db");
-
-async function GET() {
-  const events = await prisma.event.findMany({
-    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
-    include: {
-      _count: { select: { messages: true } },
-    },
-  });
-
-  // sort: live first, then upcoming, then ended
-  const order = { live: 0, upcoming: 1, ended: 2 };
-  events.sort((a, b) => order[a.status] - order[b.status]);
-
-  return NextResponse.json(events);
-}
+const { getCachedEvents, setCachedEvents, invalidateEventsCache } = require("../../../lib/cache");
+const { checkIpRateLimit } = require("../../../lib/rateLimit");
 
 const VALID_STATUS = ["upcoming", "live", "ended"];
-const lastCreate = new Map();
-const MIN_INTERVAL_MS = 10000; // 1 new event per 10s per IP, keeps it simple but discourages spam
 
 function getIp(req) {
   return (
@@ -28,11 +13,39 @@ function getIp(req) {
   );
 }
 
+async function fetchEventsFromDb() {
+  const events = await prisma.event.findMany({
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    include: {
+      _count: { select: { messages: true } },
+    },
+  });
+
+  const order = { live: 0, upcoming: 1, ended: 2 };
+  events.sort((a, b) => order[a.status] - order[b.status]);
+  return events;
+}
+
+async function GET() {
+  const cached = await getCachedEvents();
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: { "X-Cache": "HIT" },
+    });
+  }
+
+  const events = await fetchEventsFromDb();
+  await setCachedEvents(events);
+
+  return NextResponse.json(events, {
+    headers: { "X-Cache": "MISS" },
+  });
+}
+
 async function POST(req) {
   const ip = getIp(req);
-  const now = Date.now();
-  const last = lastCreate.get(ip) || 0;
-  if (now - last < MIN_INTERVAL_MS) {
+  const allowed = await checkIpRateLimit(ip, "event-create", 1, 10);
+  if (!allowed) {
     return NextResponse.json(
       { error: "Slow down a little before adding another event." },
       { status: 429 }
@@ -64,7 +77,7 @@ async function POST(req) {
     data: { title, subtitle, status },
   });
 
-  lastCreate.set(ip, now);
+  await invalidateEventsCache();
 
   return NextResponse.json(event, { status: 201 });
 }

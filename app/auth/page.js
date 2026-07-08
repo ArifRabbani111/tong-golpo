@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const AUTH_SESSION_KEY = "matchtalk_anonSessionId";
+const AUTH_SESSION_KEY = "tonggolpo_anonSessionId";
 
-export default function AuthPage() {
+function AuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/";
 
-  const [mode, setMode] = useState("login"); // "login", "signup", or "anon"
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +19,7 @@ export default function AuthPage() {
   function getOrCreateSessionId() {
     let sessionId = window.localStorage.getItem(AUTH_SESSION_KEY);
     if (!sessionId) {
-      sessionId = Math.random().toString(36).slice(2, 10); // Random 8-char string
+      sessionId = Math.random().toString(36).slice(2, 10);
       window.localStorage.setItem(AUTH_SESSION_KEY, sessionId);
     }
     return sessionId;
@@ -31,7 +31,8 @@ export default function AuthPage() {
     setError("");
 
     try {
-      let endpoint, body;
+      let endpoint;
+      let body;
 
       if (mode === "signup") {
         endpoint = "/api/auth/signup";
@@ -45,7 +46,6 @@ export default function AuthPage() {
         endpoint = "/api/auth/login";
         body = { anonymous: true, sessionId: getOrCreateSessionId() };
       } else {
-        // mode === "login"
         endpoint = "/api/auth/login";
         if (!email || !password) {
           setError("Email and password required.");
@@ -69,7 +69,6 @@ export default function AuthPage() {
         return;
       }
 
-      // Store token and user
       window.localStorage.setItem("token", data.token);
       window.localStorage.setItem(
         "user",
@@ -81,9 +80,8 @@ export default function AuthPage() {
         })
       );
 
-      // Redirect
       router.push(returnTo);
-    } catch (err) {
+    } catch {
       setError("Network error. Try again.");
       setLoading(false);
     }
@@ -93,25 +91,28 @@ export default function AuthPage() {
     <div className="wrap auth-page">
       <div className="topbar">
         <div className="brand">
-          Match<span>Talk</span>
+          Tong<span>Golpo</span>
         </div>
       </div>
 
       <div className="auth-box">
         <div className="auth-tabs">
           <button
+            type="button"
             className={mode === "login" ? "tab active" : "tab"}
             onClick={() => setMode("login")}
           >
             Log in
           </button>
           <button
+            type="button"
             className={mode === "signup" ? "tab active" : "tab"}
             onClick={() => setMode("signup")}
           >
             Sign up
           </button>
           <button
+            type="button"
             className={mode === "anon" ? "tab active" : "tab"}
             onClick={() => setMode("anon")}
           >
@@ -122,14 +123,9 @@ export default function AuthPage() {
         {mode === "anon" ? (
           <form onSubmit={handleSubmit} className="auth-form">
             <p className="anon-info">
-              Post anonymously. Your session will be remembered so your messages stay linked.
+              Post anonymously. Your session is remembered so your messages stay linked.
             </p>
-            <button
-              type="submit"
-              className="send-btn"
-              disabled={loading}
-              style={{ marginTop: "10px" }}
-            >
+            <button type="submit" className="send-btn" disabled={loading}>
               {loading ? "Loading…" : "Continue anonymously"}
             </button>
             {error && <div className="error-text form-error">{error}</div>}
@@ -157,16 +153,20 @@ export default function AuthPage() {
               className="send-btn"
               disabled={loading || !email || !password}
             >
-              {loading
-                ? "Loading…"
-                : mode === "login"
-                ? "Log in"
-                : "Sign up"}
+              {loading ? "Loading…" : mode === "login" ? "Log in" : "Sign up"}
             </button>
             {error && <div className="error-text form-error">{error}</div>}
           </form>
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<div className="wrap empty">Loading…</div>}>
+      <AuthForm />
+    </Suspense>
   );
 }
