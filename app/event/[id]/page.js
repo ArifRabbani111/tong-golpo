@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getStoredUser, authHeaders, requireAuthRedirect } from "../../lib/clientAuth";
-import { getPusherClient, isPusherEnabled } from "../../lib/pusherClient";
 import { MessageBubble, ChatComposer } from "../../components/ChatUI";
 
 const POLL_MS = 5000;
@@ -56,7 +55,8 @@ export default function EventRoom() {
     if (!id) return;
     let cancelled = false;
 
-    async function loadHistory() {
+    async function setupRealtime() {
+      // Initial load of messages
       try {
         const res = await fetch(`/api/events/${id}/messages`);
         if (!res.ok || cancelled) return;
@@ -65,45 +65,65 @@ export default function EventRoom() {
         setMessages(data);
         if (data.length) lastTimestamp.current = data[data.length - 1].createdAt;
       } catch {
-        // retry via poll if pusher off
+        console.error("Failed to load messages");
       }
-    }
 
-    loadHistory();
-
-    if (isPusherEnabled()) {
-      const pusher = getPusherClient();
-      const channel = pusher.subscribe(`event-${id}`);
-      channel.bind("new-message", (msg) => {
-        if (!cancelled) appendMessages([msg]);
-      });
-      setLive(true);
-
-      return () => {
-        cancelled = true;
-        channel.unbind_all();
-        pusher.unsubscribe(`event-${id}`);
-      };
-    }
-
-    const poll = setInterval(async () => {
-      const url = lastTimestamp.current
-        ? `/api/events/${id}/messages?after=${encodeURIComponent(lastTimestamp.current)}`
-        : `/api/events/${id}/messages`;
+      // Subscribe to new messages via Supabase Realtime
       try {
-        const res = await fetch(url);
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        appendMessages(data);
-        if (data.length) lastTimestamp.current = data[data.length - 1].createdAt;
-      } catch {
-        // silent
-      }
-    }, POLL_MS);
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        );
 
+        const channel = supabase
+          .channel(`chat:${id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "Message",
+              filter: `eventId=eq.${id}`,
+            },
+            (payload) => {
+              if (!cancelled) {
+                appendMessages([payload.new]);
+                setLive(true);
+              }
+            }
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      } catch (err) {
+        console.warn("Supabase Realtime failed, falling back to polling:", err);
+        // Fallback to polling if Realtime fails
+        const poll = setInterval(async () => {
+          const url = lastTimestamp.current
+            ? `/api/events/${id}/messages?after=${encodeURIComponent(lastTimestamp.current)}`
+            : `/api/events/${id}/messages`;
+          try {
+            const res = await fetch(url);
+            if (!res.ok || cancelled) return;
+            const data = await res.json();
+            appendMessages(data);
+            if (data.length) lastTimestamp.current = data[data.length - 1].createdAt;
+          } catch {
+            // silent
+          }
+        }, POLL_MS);
+
+        return () => clearInterval(poll);
+      }
+    }
+
+    const cleanup = setupRealtime();
     return () => {
       cancelled = true;
-      clearInterval(poll);
+      cleanup?.then((fn) => fn?.());
     };
   }, [id, appendMessages]);
 
